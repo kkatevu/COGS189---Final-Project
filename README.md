@@ -13,17 +13,24 @@ Using **EEG data**, we aim to analyze how short-form video consumption affects c
 
 ## Repository Structure
 ```
-├── data/                   # EEG datasets
-├── notebooks/
-│   ├── eeg_data_collection.ipynb  # Notebook for collecting EEG data
-│   ├── eeg_data_analysis.ipynb    # Notebook for processing and analyzing EEG data
+COGS189---FINAL-PROJECT/
+├── COGS189/                   # Virtual environment (ignored in Git)
+├── Notebooks/
+│   ├── eeg_data_analysis.ipynb
+│   ├── eeg_data_collection.ipynb
 ├── src/
-│   ├── collect_eeg.py      # Python script for EEG data collection
-│   ├── process_eeg.py      # Script for preprocessing and analyzing EEG signals
-│   ├── utils.py            # Helper functions
-├── README.md               # Project documentation
-├── requirements.txt        # Required dependencies
-└── LICENSE                 # License information
+│   ├── collect_eeg.py
+│   ├── process_eeg.py
+│   ├── utils.py
+├── data/
+│   ├── (Examples of how data files will look)
+│   ├── data/subject_001_session_1.npy
+│   ├── data/subject_002_session_1.npy
+│   ├── data/subject_001_session_2.npy
+├── README.md                   # Project documentation
+├── requirements.txt             # Dependencies
+├── .gitignore                   # Ignore unnecessary files
+
 ```
 
 ## Installation
