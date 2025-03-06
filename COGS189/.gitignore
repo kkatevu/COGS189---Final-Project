@@ -1,0 +1,5 @@
+COGS189/
+venv/
+data/*.npy
+data/*.edf
+**/.ipynb_checkpoints/
