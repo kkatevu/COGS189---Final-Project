@@ -29,8 +29,8 @@ Using **EEG data**, we aim to analyze how short-form video consumption affects c
 ## Installation
 ### 1️⃣ Clone the Repository
 ```sh
- git clone https://github.com/yourusername/eeg-focus-project.git
- cd eeg-focus-project
+ git clone https://github.com/yourusername/COGS189---Final-Project.git
+ cd COGS189---Final-Project.git
 ```
 
 ### 2️⃣ Set Up Virtual Environment
