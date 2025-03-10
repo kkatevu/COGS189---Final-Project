@@ -1,90 +1,124 @@
+import glob, sys, time, serial, os
 import numpy as np
-import time
-import os
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, BrainFlowError
+from brainflow.board_shim import BoardShim, BrainFlowInputParams
+from serial import Serial
+from threading import Thread, Event
+from queue import Queue
+from psychopy.hardware import keyboard
 
-# Initialize BrainFlow connection
-def initialize_brainflow_board(board_id=0):
-    """Initializes BrainFlow connection for EEG data collection."""
-    params = BrainFlowInputParams()
-    
-    try:
-        board = BoardShim(board_id, params)
-        board.prepare_session()
-        board.start_stream()
-        print("BrainFlow board initialized successfully.")
-        return board
-    except BrainFlowError as e:
-        print(f"Error initializing BrainFlow: {e}")
-        return None
+# CONFIGURATION
+lsl_out = False
+save_dir = 'data/subjects/'  # Base directory for saved data
+sampling_rate = 250
+CYTON_BOARD_ID = 0  # 0 for no daisy, 2 for daisy, 6 for daisy + WiFi
+BAUD_RATE = 115200
+ANALOGUE_MODE = '/2'  # Reads from analog pins A5(D11), A6(D12), and A7(D13)
 
-# Collect EEG data
-def collect_eeg_data(board, duration=60):
-    """
-    Records EEG data for a given duration.
+# USER INPUT
+subject_id = input("Enter Subject ID: ").strip()
+session_id = input("Enter Session Number: ").strip()
+if not subject_id or not session_id.isdigit():
+    print("Invalid input. Please enter a valid Subject ID and numeric Session ID.")
+    sys.exit()
 
-    Args:
-        board: Initialized BrainFlow board object.
-        duration: Duration of recording in seconds.
+session_id = int(session_id)  # Convert session number to integer
+subject_dir = os.path.join(save_dir, f"subject_{subject_id}_session_{session_id}")
+os.makedirs(subject_dir, exist_ok=True)  # Ensure subject folder exists
 
-    Returns:
-        EEG data as a NumPy array.
-    """
-    if board is None:
-        print("No board initialized. Exiting data collection.")
-        return None
-    
-    print(f"Collecting EEG data for {duration} seconds...")
-    time.sleep(duration)  # Simulate experiment duration
-    data = board.get_board_data()
-    print("EEG data collection complete.")
-    return data
+# Filenames
+save_file_eeg = os.path.join(subject_dir, f"eeg_run-{session_id}.npy")
+save_file_aux = os.path.join(subject_dir, f"aux_run-{session_id}.npy")
+save_file_timestamps = os.path.join(subject_dir, f"timestamps_run-{session_id}.npy")
 
-# Save EEG data for each subject
-def save_eeg_data(data, subject_id, session_id=1, folder="data/"):
-    """
-    Saves EEG data with a unique filename for each subject.
+# FIND OPENBCI PORT
+def find_openbci_port():
+    """Finds the port to which the Cyton Dongle is connected."""
+    if sys.platform.startswith('win'):
+        ports = ['COM%s' % (i + 1) for i in range(256)]
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        ports = glob.glob('/dev/ttyUSB*')
+    elif sys.platform.startswith('darwin'):
+        ports = glob.glob('/dev/cu.usbserial*')
+    else:
+        raise EnvironmentError('Error finding ports on your operating system')
 
-    Args:
-        data: EEG data as a NumPy array.
-        subject_id: Unique subject identifier.
-        session_id: Session number (optional).
-        folder: Directory where data will be saved.
-    """
-    if data is None:
-        print("No EEG data to save.")
-        return
-    
-    # Ensure the data folder exists
-    os.makedirs(folder, exist_ok=True)
+    for port in ports:
+        try:
+            s = Serial(port=port, baudrate=BAUD_RATE, timeout=None)
+            s.write(b'v')
+            time.sleep(2)
+            if s.inWaiting():
+                line = ''
+                while '$$$' not in line:
+                    line += s.read().decode('utf-8', errors='replace')
+                if 'OpenBCI' in line:
+                    s.close()
+                    return port
+            s.close()
+        except (OSError, serial.SerialException):
+            pass
+    raise OSError('Cannot find OpenBCI port.')
 
-    # Construct the filename
-    filename = os.path.join(folder, f"subject_{subject_id}_session_{session_id}.npy")
+# INITIALIZE BOARD
+print(BoardShim.get_board_descr(CYTON_BOARD_ID))
+params = BrainFlowInputParams()
+params.serial_port = find_openbci_port() if CYTON_BOARD_ID != 6 else None
+params.ip_port = 9000 if CYTON_BOARD_ID == 6 else None
 
-    # Save the data
-    np.save(filename, data)
-    print(f"EEG data saved to {filename}")
+board = BoardShim(CYTON_BOARD_ID, params)
+board.prepare_session()
+board.config_board('/0')
+board.config_board('//')
+board.config_board(ANALOGUE_MODE)
+board.start_stream(45000)
+stop_event = Event()
 
-# Main function to run EEG data collection
-def main():
-    subject_id = input("Enter Subject ID: ").strip()
-    session_id = input("Enter Session Number: ").strip()
-    
-    if not subject_id or not session_id.isdigit():
-        print("Invalid input. Please enter a valid Subject ID and numeric Session ID.")
-        return
+# FUNCTION TO COLLECT DATA
+def get_data(queue_in):
+    while not stop_event.is_set():
+        data_in = board.get_board_data()
+        timestamp_in = data_in[board.get_timestamp_channel(CYTON_BOARD_ID)]
+        eeg_in = data_in[board.get_eeg_channels(CYTON_BOARD_ID)]
+        aux_in = data_in[board.get_analog_channels(CYTON_BOARD_ID)]
+        if len(timestamp_in) > 0:
+            print('Data Queued: EEG:', eeg_in.shape, 'AUX:', aux_in.shape, 'Timestamps:', timestamp_in.shape)
+            queue_in.put((eeg_in, aux_in, timestamp_in))
+        time.sleep(0.1)
 
-    session_id = int(session_id)  # Convert session number to integer
+# THREAD FOR CONTINUOUS DATA COLLECTION
+queue_in = Queue()
+cyton_thread = Thread(target=get_data, args=(queue_in,))
+cyton_thread.daemon = True
+cyton_thread.start()
 
-    board = initialize_brainflow_board()
-    if board:
-        eeg_data = collect_eeg_data(board, duration=60)
-        save_eeg_data(eeg_data, subject_id, session_id)
-        
-        # Properly stop and release the BrainFlow session
-        board.stop_stream()
-        board.release_session()
-        print("BrainFlow session closed.")
+# RECORD EEG DATA
+keyboard = keyboard.Keyboard()
+eeg = np.zeros((8, 0))
+aux = np.zeros((3, 0))
+timestamps = np.zeros((0,))
 
-if __name__ == "__main__":
-    main()
+while not stop_event.is_set():
+    time.sleep(0.1)
+    keys = keyboard.getKeys()
+    if 'escape' in keys:
+        stop_event.set()
+        break
+    while not queue_in.empty():
+        eeg_in, aux_in, timestamp_in = queue_in.get()
+        print('Processing: EEG:', eeg_in.shape, 'AUX:', aux_in.shape, 'Timestamps:', timestamp_in.shape)
+        eeg = np.hstack((eeg, eeg_in))
+        aux = np.hstack((aux, aux_in))
+        timestamps = np.hstack((timestamps, timestamp_in))
+        print('Total Collected:', eeg.shape, aux.shape, timestamps.shape)
+
+# SAVE EEG, AUX, AND TIMESTAMPS
+np.save(save_file_eeg, eeg)
+np.save(save_file_aux, aux)
+np.save(save_file_timestamps, timestamps)
+print(f"Data saved: \n EEG: {save_file_eeg} \n AUX: {save_file_aux} \n Timestamps: {save_file_timestamps}")
+
+# CLEANUP
+board.stop_stream()
+board.release_session()
+print("Session closed.")
+
