@@ -14,19 +14,20 @@ Using **EEG data**, we aim to analyze how short-form video consumption affects c
 ## Repository Structure
 ```
 COGS189---FINAL-PROJECT/
-├── COGS189/                   # Virtual environment (ignored in Git)
-├── Notebooks/
-│   ├── eeg_data_analysis.ipynb
-│   ├── eeg_data_collection.ipynb
-├── src/
-│   ├── collect_eeg.py
-│   ├── process_eeg.py
-│   ├── utils.py
-├── data/
-│   ├── (Examples of how data files will look)
-│   ├── data/subject_001_session_1.npy
-│   ├── data/subject_002_session_1.npy
-│   ├── data/subject_001_session_2.npy
+├── COGS189/                  # Virtual environment (ignored in Git)
+├── project_meat/
+   ├── Notebooks/
+   │   ├── eeg_data_analysis.ipynb
+   │   ├── eeg_data_collection.ipynb
+   ├── src/
+   │   ├── collect_eeg.py
+   │   ├── process_eeg.py
+   │   ├── utils.py
+   ├── data/
+   │   ├── (Examples of how data files will look)
+   │   ├── data/subject_001_session_1.npy
+   │   ├── data/subject_002_session_1.npy
+   │   ├── data/subject_001_session_2.npy
 ├── README.md                   # Project documentation
 ├── requirements.txt             # Dependencies
 ├── .gitignore                   # Ignore unnecessary files
