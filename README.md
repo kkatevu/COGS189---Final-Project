@@ -15,7 +15,7 @@ Using **EEG data**, we aim to analyze how short-form video consumption affects c
 ## Repository Structure
 ```
 COGS189---FINAL-PROJECT/
-├── COGS189/                  # Virtual environment (ignored in Git)
+├── COGS189/       
 ├── project_meat/
    ├── Notebooks/
    │   ├── eeg_data_analysis.ipynb
@@ -23,6 +23,7 @@ COGS189---FINAL-PROJECT/
    ├── src/
    │   ├── collect_eeg.py
    │   ├── process_eeg.py
+   │   ├── stroop_test.py
    │   ├── utils.py
    ├── data/
    │   ├── (Examples of how data files will look)
