@@ -1,4 +1,8 @@
-import glob, sys, time, serial, os
+import glob
+import sys
+import time
+import serial
+import os
 import numpy as np
 from brainflow.board_shim import BoardShim, BrainFlowInputParams
 from serial import Serial
@@ -8,13 +12,12 @@ from psychopy.hardware import keyboard
 
 # CONFIGURATION
 lsl_out = False
-save_dir = 'data/subjects/'  # Base directory for saved data
 sampling_rate = 250
 CYTON_BOARD_ID = 0  # 0 for no daisy, 2 for daisy, 6 for daisy + WiFi
 BAUD_RATE = 115200
 ANALOGUE_MODE = '/2'  # Reads from analog pins A5(D11), A6(D12), and A7(D13)
 
-# USER INPUT
+# USER INPUT FOR SUBJECT & SESSION
 subject_id = input("Enter Subject ID: ").strip()
 session_id = input("Enter Session Number: ").strip()
 if not subject_id or not session_id.isdigit():
@@ -22,13 +25,13 @@ if not subject_id or not session_id.isdigit():
     sys.exit()
 
 session_id = int(session_id)  # Convert session number to integer
-subject_dir = os.path.join(save_dir, f"subject_{subject_id}_session_{session_id}")
-os.makedirs(subject_dir, exist_ok=True)  # Ensure subject folder exists
+save_dir = f'project_meat/data/subjects/subject_{subject_id}_session_{session_id}/'
+os.makedirs(save_dir, exist_ok=True)  # Ensure subject/session folder exists
 
-# Filenames
-save_file_eeg = os.path.join(subject_dir, f"eeg_run-{session_id}.npy")
-save_file_aux = os.path.join(subject_dir, f"aux_run-{session_id}.npy")
-save_file_timestamps = os.path.join(subject_dir, f"timestamps_run-{session_id}.npy")
+# FILENAMES
+save_file_eeg = os.path.join(save_dir, f"eeg_run-{session_id}.npy")
+save_file_aux = os.path.join(save_dir, f"aux_run-{session_id}.npy")
+save_file_timestamps = os.path.join(save_dir, f"timestamps_run-{session_id}.npy")
 
 # FIND OPENBCI PORT
 def find_openbci_port():
@@ -121,4 +124,3 @@ print(f"Data saved: \n EEG: {save_file_eeg} \n AUX: {save_file_aux} \n Timestamp
 board.stop_stream()
 board.release_session()
 print("Session closed.")
-
