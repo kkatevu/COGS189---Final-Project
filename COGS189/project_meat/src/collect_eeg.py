@@ -7,6 +7,7 @@ from brainflow.board_shim import BoardShim, BrainFlowInputParams, LogLevels, Boa
 from brainflow.data_filter import DataFilter
 from pynput import keyboard
 
+
 # --------------------------
 # USER INPUT FOR SUBJECT & SESSION
 # --------------------------
