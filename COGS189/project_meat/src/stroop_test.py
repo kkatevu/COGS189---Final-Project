@@ -257,7 +257,7 @@ def run_experiment(board):
 def main():
     BoardShim.enable_dev_board_logger()
     params = BrainFlowInputParams()
-    params.serial_port = "COM8"  # Adjust port as needed
+    params.serial_port = "COM6"  # Adjust port as needed
     board = BoardShim(BoardIds.CYTON_BOARD, params)
     board.prepare_session()
     board.start_stream(45000)
