@@ -17,16 +17,18 @@ if not subject_id or not session_id.isdigit():
 
 session_id = int(session_id)  # Convert session number to integer
 
-save_dir = os.path.join(
-    os.path.dirname(__file__),  
-    "..",                       
+base_data_dir = os.path.join(
+    os.path.dirname(__file__),  # directory of stroop_test.py
+    "..",                       # go up one level (to project_meat/)
     "data"
 )
-os.makedirs(save_dir, exist_ok=True)
+# Folder named after the subject ID
+subject_dir = os.path.join(base_data_dir, subject_id)
+os.makedirs(subject_dir, exist_ok=True)
 
-# Construct a filename: "stroop_results_SUBJECTID_SESSIONID.csv"
+# Construct a filename: "stroop_SUBJECTID_SESSIONID.csv"
 save_filename = f"stroop_{subject_id}_session_{session_id}.csv"
-save_path = os.path.join(save_dir, save_filename)
+save_path = os.path.join(subject_dir, save_filename)
 
 # -------------------------------------------------------------------
 # PYGAME SETUP (Full Screen)

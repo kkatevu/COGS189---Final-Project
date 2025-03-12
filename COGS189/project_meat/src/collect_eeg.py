@@ -25,18 +25,20 @@ if not subject_id or not session_id.isdigit():
     sys.exit()
     
 session_id = int(session_id)  # Convert session number to integer
-    
-save_dir = os.path.join(
-    os.path.dirname(__file__),  
-    "..",                       
+
+# CREATE A FOLDER FOR THIS SUBJECT INSIDE data/, NAMED <subject_id>_eeg
+base_data_dir = os.path.join(
+    os.path.dirname(__file__),  # directory of collect_eeg.py
+    "..",                       # go up one level (to project_meat/)
     "data"
 )
-os.makedirs(save_dir, exist_ok=True)
+subject_dir = os.path.join(base_data_dir, f"{subject_id}_eeg")
+os.makedirs(subject_dir, exist_ok=True)
 
-# FILENAMES
-save_file_eeg = os.path.join(save_dir, f"eeg_{subject_id}_session_{session_id}.npy")
-save_file_aux = os.path.join(save_dir, f"aux_{subject_id}_session_{session_id}.npy")
-save_file_timestamps = os.path.join(save_dir, f"timestamps_{subject_id}_session_{session_id}.npy")
+# FILENAMES (inside the subject-specific folder)
+save_file_eeg = os.path.join(subject_dir, f"eeg_{subject_id}_session_{session_id}.npy")
+save_file_aux = os.path.join(subject_dir, f"aux_{subject_id}_session_{session_id}.npy")
+save_file_timestamps = os.path.join(subject_dir, f"timestamps_{subject_id}_session_{session_id}.npy")
 
 # FIND OPENBCI PORT
 def find_openbci_port():
@@ -100,14 +102,14 @@ cyton_thread.daemon = True
 cyton_thread.start()
 
 # RECORD EEG DATA
-keyboard = keyboard.Keyboard()
+kb = keyboard.Keyboard()  # Renamed to avoid overshadowing 'keyboard' module
 eeg = np.zeros((8, 0))
 aux = np.zeros((3, 0))
 timestamps = np.zeros((0,))
 
 while not stop_event.is_set():
     time.sleep(0.1)
-    keys = keyboard.getKeys()
+    keys = kb.getKeys()
     if 'escape' in keys:
         stop_event.set()
         break
