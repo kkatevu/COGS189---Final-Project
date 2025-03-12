@@ -25,7 +25,7 @@ save_dir = os.path.join(
 os.makedirs(save_dir, exist_ok=True)
 
 # Construct a filename: "stroop_results_SUBJECTID_SESSIONID.csv"
-save_filename = f"stroop_results_{subject_id}_session_{session_id}.csv"
+save_filename = f"stroop_{subject_id}_session_{session_id}.csv"
 save_path = os.path.join(save_dir, save_filename)
 
 # -------------------------------------------------------------------

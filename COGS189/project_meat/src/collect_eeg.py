@@ -23,15 +23,20 @@ session_id = input("Enter Session Number: ").strip()
 if not subject_id or not session_id.isdigit():
     print("Invalid input. Please enter a valid Subject ID and numeric Session ID.")
     sys.exit()
-
+    
 session_id = int(session_id)  # Convert session number to integer
-save_dir = f'project_meat/data/subjects/subject_{subject_id}_session_{session_id}/'
-os.makedirs(save_dir, exist_ok=True)  # Ensure subject/session folder exists
+    
+save_dir = os.path.join(
+    os.path.dirname(__file__),  
+    "..",                       
+    "data"
+)
+os.makedirs(save_dir, exist_ok=True)
 
 # FILENAMES
-save_file_eeg = os.path.join(save_dir, f"eeg_run-{session_id}.npy")
-save_file_aux = os.path.join(save_dir, f"aux_run-{session_id}.npy")
-save_file_timestamps = os.path.join(save_dir, f"timestamps_run-{session_id}.npy")
+save_file_eeg = os.path.join(save_dir, f"eeg_{subject_id}_session_{session_id}.npy")
+save_file_aux = os.path.join(save_dir, f"aux_{subject_id}_session_{session_id}.npy")
+save_file_timestamps = os.path.join(save_dir, f"timestamps_{subject_id}_session_{session_id}.npy")
 
 # FIND OPENBCI PORT
 def find_openbci_port():
