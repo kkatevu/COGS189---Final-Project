@@ -18,27 +18,31 @@ BAUD_RATE = 115200
 ANALOGUE_MODE = '/2'  # Reads from analog pins A5(D11), A6(D12), and A7(D13)
 
 # USER INPUT FOR SUBJECT & SESSION
-subject_id = input("Enter Subject ID: ").strip()
+subject_id = input("Enter Subject ID (e.g. subject001): ").strip()
 session_id = input("Enter Session Number: ").strip()
 if not subject_id or not session_id.isdigit():
     print("Invalid input. Please enter a valid Subject ID and numeric Session ID.")
     sys.exit()
-    
+
 session_id = int(session_id)  # Convert session number to integer
 
-# CREATE A FOLDER FOR THIS SUBJECT INSIDE data/, NAMED <subject_id>_eeg
+# CREATE SUBJECT FOLDER INSIDE data/:
 base_data_dir = os.path.join(
     os.path.dirname(__file__),  # directory of collect_eeg.py
     "..",                       # go up one level (to project_meat/)
     "data"
 )
-subject_dir = os.path.join(base_data_dir, f"{subject_id}_eeg")
-os.makedirs(subject_dir, exist_ok=True)
+subject_folder = os.path.join(base_data_dir, subject_id)
+os.makedirs(subject_folder, exist_ok=True)
 
-# FILENAMES (inside the subject-specific folder)
-save_file_eeg = os.path.join(subject_dir, f"eeg_{subject_id}_session_{session_id}.npy")
-save_file_aux = os.path.join(subject_dir, f"aux_{subject_id}_session_{session_id}.npy")
-save_file_timestamps = os.path.join(subject_dir, f"timestamps_{subject_id}_session_{session_id}.npy")
+# CREATE eeg/ SUBFOLDER INSIDE THE SUBJECT FOLDER
+eeg_folder = os.path.join(subject_folder, "eeg")
+os.makedirs(eeg_folder, exist_ok=True)
+
+# FILENAMES
+save_file_eeg = os.path.join(eeg_folder, f"eeg_{subject_id}_session_{session_id}.npy")
+save_file_aux = os.path.join(eeg_folder, f"aux_{subject_id}_session_{session_id}.npy")
+save_file_timestamps = os.path.join(eeg_folder, f"timestamps_{subject_id}_session_{session_id}.npy")
 
 # FIND OPENBCI PORT
 def find_openbci_port():
@@ -102,7 +106,7 @@ cyton_thread.daemon = True
 cyton_thread.start()
 
 # RECORD EEG DATA
-kb = keyboard.Keyboard()  # Renamed to avoid overshadowing 'keyboard' module
+kb = keyboard.Keyboard()
 eeg = np.zeros((8, 0))
 aux = np.zeros((3, 0))
 timestamps = np.zeros((0,))
