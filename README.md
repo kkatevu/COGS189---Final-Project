@@ -19,7 +19,6 @@ COGS189---FINAL-PROJECT/
 ├── project_meat/
    ├── Notebooks/
    │   ├── eeg_data_analysis.ipynb
-   │   ├── eeg_data_collection.ipynb
    ├── src/
    │   ├── collect_eeg.py
    │   ├── process_eeg.py
@@ -27,10 +26,9 @@ COGS189---FINAL-PROJECT/
    │   ├── utils.py
    ├── data/
    │   ├── (Examples of how data files will look)
-   │   ├── data/subject_001_session_1.npy
-   │   ├── data/subject_002_session_1.npy
-   │   ├── data/subject_001_session_2.npy
-├── README.md                   # Project documentation
+   │   ├── subject_001_session_001.npy
+   |   ├── stroop_results_001_session_001.csv
+├── README.md                    # Project documentation
 ├── requirements.txt             # Dependencies
 ├── .gitignore                   # Ignore unnecessary files
 
