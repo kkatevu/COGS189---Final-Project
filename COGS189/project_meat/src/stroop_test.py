@@ -4,255 +4,315 @@ import random
 import time
 import csv
 import sys
-from datetime import datetime  # NEW: for timestamps
+from datetime import datetime
 
-def main():
+# -------------------------------------------------------------------
+# USER INPUT FOR SUBJECT & SESSION
+# -------------------------------------------------------------------
+subject_id = input("Enter Subject ID: ").strip()
+session_id = input("Enter Session Number: ").strip()
+if not subject_id or not session_id.isdigit():
+    print("Invalid input. Please enter a valid Subject ID and numeric Session ID.")
+    sys.exit()
+
+session_id = int(session_id)  # Convert session number to integer
+
+save_dir = os.path.join(
+    os.path.dirname(__file__),  
+    "..",                       
+    "data"
+)
+os.makedirs(save_dir, exist_ok=True)
+
+# Construct a filename: "stroop_results_SUBJECTID_SESSIONID.csv"
+save_filename = f"stroop_results_{subject_id}_session_{session_id}.csv"
+save_path = os.path.join(save_dir, save_filename)
+
+# -------------------------------------------------------------------
+# PYGAME SETUP (Full Screen)
+# -------------------------------------------------------------------
+pygame.init()
+
+# Grab the full screen resolution of the current display
+info_object = pygame.display.Info()
+WIDTH, HEIGHT = info_object.current_w, info_object.current_h
+
+# Create a full screen display
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+pygame.display.set_caption("Stroop Test")
+
+# Define color dictionary
+COLORS = {
+    "RED": (255, 0, 0),
+    "GREEN": (0, 255, 0),
+    "BLUE": (0, 0, 255),
+    "YELLOW": (200, 200, 0)
+}
+COLOR_KEYS = list(COLORS.keys())
+
+# Fonts
+FONT = pygame.font.Font(None, 80)
+INSTRUCTION_FONT = pygame.font.Font(None, 40)
+
+# -------------------------------------------------------------------
+# EXPERIMENT VARIABLES
+# -------------------------------------------------------------------
+WAIT_DURATION = 10  # 300 seconds = 5 minutes. Adjust as needed.
+
+# -------------------------------------------------------------------
+# HELPER FUNCTIONS
+# -------------------------------------------------------------------
+def save_results(results_list):
     """
-    Modified Stroop Test:
-      - Prompts for user ID
-      - Saves partial or full data to data/stroop_results_<USER_ID>.csv
-      - 5 tests total, each with 20 trials
-      - 'Exit Early' button allows partial saving
-      - NOW includes a Timestamp column for each trial.
+    Appends results to a CSV file. If the file does not exist,
+    it creates it and writes the header row.
     """
+    file_exists = os.path.isfile(save_path)
+    with open(save_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow([
+                "Test Number",
+                "Round Number",
+                "Word",
+                "Match?",        # Indicates if this trial is a match trial.
+                "User Response",
+                "Reaction Time",
+                "Correct",       # Indicates if the subject's response was correct.
+                "Timestamp"
+            ])
+        writer.writerows(results_list)
+    print(f"Results saved to {save_path}")
 
-    # -------------------------------------------------------------------------
-    # 1) Ask for User ID and Build Save Path
-    # -------------------------------------------------------------------------
-    user_id = input("Enter user ID: ").strip()
+def generate_trials():
+    """
+    Creates 20 Stroop trials with a random ratio of matching vs. non-matching.
+    
+    A random number (between 0 and 20) is chosen for matching trials.
+    The remaining trials are non-matching.
+    """
+    total_trials = 20
+    num_match = random.randint(0, total_trials)
+    num_mismatch = total_trials - num_match
+    trials = []
 
-    # Construct path: place CSV inside the ../data directory relative to this script
-    script_dir = os.path.dirname(__file__)
-    data_dir = os.path.join(script_dir, "..", "data")
-    os.makedirs(data_dir, exist_ok=True)
-    save_path = os.path.join(data_dir, f"stroop_results_{user_id}.csv")
+    # Create match trials (word's text and color match)
+    for _ in range(num_match):
+        word = random.choice(COLOR_KEYS)
+        trials.append((word, COLORS[word], True))
+    
+    # Create mismatch trials (word's text and color do NOT match)
+    for _ in range(num_mismatch):
+        word = random.choice(COLOR_KEYS)
+        mismatch_choices = [c for c in COLOR_KEYS if c != word]
+        color_choice = random.choice(mismatch_choices)
+        trials.append((word, COLORS[color_choice], False))
+    
+    random.shuffle(trials)
+    return trials
 
-    # -------------------------------------------------------------------------
-    # 2) Initialize Pygame and Set Up
-    # -------------------------------------------------------------------------
-    pygame.init()
-    WIDTH, HEIGHT = 800, 600
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Stroop Test")
+def show_message(message, duration=3):
+    """
+    Displays a simple message on screen for `duration` seconds.
+    (Note: ESC won't interrupt these brief messages.)
+    """
+    screen.fill((255, 255, 255))
+    msg_surface = INSTRUCTION_FONT.render(message, True, (0, 0, 0))
+    msg_rect = msg_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(msg_surface, msg_rect)
+    pygame.display.flip()
+    time.sleep(duration)
 
-    # Darker yellow for better visibility
-    COLORS = {
-        "RED": (255, 0, 0),
-        "GREEN": (0, 255, 0),
-        "BLUE": (0, 0, 255),
-        "YELLOW": (200, 200, 0)
-    }
-    COLOR_KEYS = list(COLORS.keys())
+def run_timer(duration, message):
+    """
+    Displays a countdown timer for `duration` seconds with `message`.
+    ESC can be used to exit at any time.
+    """
+    start_time = time.time()
+    while True:
+        elapsed = time.time() - start_time
+        remaining = int(duration - elapsed)
+        if remaining < 0:
+            remaining = 0
 
-    # Fonts
-    FONT = pygame.font.Font(None, 80)
-    BUTTON_FONT = pygame.font.Font(None, 50)
-    INSTRUCTION_FONT = pygame.font.Font(None, 40)
-
-    # "Continue" button & "Exit" button side by side
-    continue_rect = pygame.Rect(WIDTH // 2 - 160, HEIGHT // 2 + 40, 150, 60)
-    exit_rect     = pygame.Rect(WIDTH // 2 +  10, HEIGHT // 2 + 40, 150, 60)
-
-    # Master list of all results
-    all_results = []
-
-    # -------------------------------------------------------------------------
-    # 3) Helper Functions
-    # -------------------------------------------------------------------------
-    def generate_trials():
-        """Generate 20 trials: 10 correct (word == color) and 10 incorrect."""
-        trials = []
-        num_correct = 10
-        num_incorrect = 10
-
-        while num_correct > 0 or num_incorrect > 0:
-            word = random.choice(COLOR_KEYS)
-            # Decide if this trial will be correct or incorrect
-            if num_correct > 0 and random.random() < 0.5:
-                color = word  # Match
-                num_correct -= 1
-            else:
-                possible_colors = [c for c in COLOR_KEYS if c != word]
-                color = random.choice(possible_colors)  # Mismatch
-                num_incorrect -= 1
-            trials.append((word, COLORS[color], word == color))
-
-        random.shuffle(trials)
-        return trials
-
-    def draw_menu(message):
-        """
-        Draws the screen with a message and two buttons:
-          [Continue]  [Exit Early]
-        """
         screen.fill((255, 255, 255))
 
-        # Show message
+        # Display the message
         msg_surface = INSTRUCTION_FONT.render(message, True, (0, 0, 0))
         msg_rect = msg_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
         screen.blit(msg_surface, msg_rect)
 
-        # Draw Continue button
-        pygame.draw.rect(screen, (0, 128, 0), continue_rect, border_radius=8)
-        c_text = BUTTON_FONT.render("Continue", True, (255, 255, 255))
-        c_text_rect = c_text.get_rect(center=continue_rect.center)
-        screen.blit(c_text, c_text_rect)
-
-        # Draw Exit button
-        pygame.draw.rect(screen, (128, 0, 0), exit_rect, border_radius=8)
-        e_text = BUTTON_FONT.render("Exit Early", True, (255, 255, 255))
-        e_text_rect = e_text.get_rect(center=exit_rect.center)
-        screen.blit(e_text, e_text_rect)
+        # Display the timer
+        timer_surface = FONT.render(f"Time Remaining: {remaining}s", True, (0, 0, 0))
+        timer_rect = timer_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
+        screen.blit(timer_surface, timer_rect)
 
         pygame.display.flip()
 
-    def handle_menu():
-        """
-        Waits until the user clicks one of the two buttons:
-          - 'Continue' => return "continue"
-          - 'Exit Early' => return "exit"
-        """
-        while True:
+        if remaining <= 0:
+            break
+
+        for evt in pygame.event.get():
+            if evt.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit(0)
+            elif evt.type == pygame.KEYDOWN:
+                if evt.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit(0)
+
+        time.sleep(1)
+
+def run_stroop_test(test_number, round_number):
+    """
+    Runs 20 trials of the Stroop Test and returns a list of results.
+    Each trial result includes:
+        [test_number, round_number, word, is_match, user_response, reaction_time, is_correct, timestamp]
+    """
+    results = []
+    trials = generate_trials()
+
+    for i in range(20):
+        trial_timestamp = datetime.now().isoformat()
+        screen.fill((255, 255, 255))
+        word, color, is_match = trials[i]
+
+        # Render the Stroop word
+        text_surface = FONT.render(word, True, color)
+        text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(text_surface, text_rect)
+
+        # Render instructions (only F and J keys are valid)
+        inst_surface = INSTRUCTION_FONT.render("Press F for Correct | Press J for Incorrect", True, (0, 0, 0))
+        screen.blit(inst_surface, (WIDTH // 2 - 200, HEIGHT - 50))
+        pygame.display.flip()
+
+        start_time = time.time()
+        response = None
+        waiting_for_response = True
+
+        # Wait for valid key press (F or J) or ESC to quit
+        while waiting_for_response:
             for evt in pygame.event.get():
                 if evt.type == pygame.QUIT:
-                    # User closed the window => exit early
-                    return "exit"
-                elif evt.type == pygame.MOUSEBUTTONDOWN:
-                    if continue_rect.collidepoint(evt.pos):
-                        return "continue"
-                    elif exit_rect.collidepoint(evt.pos):
-                        return "exit"
-
-    def save_results(results_list):
-        """
-        Appends results to CSV at `save_path`.
-        If file doesn't exist, write the header first.
-        """
-        file_exists = os.path.isfile(save_path)
-        with open(save_path, "a", newline="") as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow([
-                    "Test Number",
-                    "Word",
-                    "Match?",
-                    "User Response",
-                    "Reaction Time",
-                    "Correct",
-                    "Timestamp"  # <--- NEW COLUMN
-                ])
-            writer.writerows(results_list)
-        print(f"Results saved to {save_path}")
-
-    def run_one_test(test_number):
-        """
-        Runs exactly 20 trials for a given test_number.
-        Returns a list of [test_number, word, is_match, response, rt, is_correct, timestamp].
-        """
-        results = []
-        trials = generate_trials()
-
-        for i in range(20):
-            # Record the timestamp for this trial's start
-            trial_timestamp = datetime.now().isoformat()
-
-            screen.fill((255, 255, 255))
-            word, color, is_match = trials[i]
-
-            # Render the Stroop word
-            text_surface = FONT.render(word, True, color)
-            text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-            screen.blit(text_surface, text_rect)
-
-            # Render instructions
-            inst_surface = INSTRUCTION_FONT.render(
-                "Press F for Correct | Press J for Incorrect",
-                True, (0, 0, 0)
-            )
-            screen.blit(inst_surface, (WIDTH // 2 - 200, HEIGHT - 50))
-
-            pygame.display.flip()
-
-            start_time = time.time()
-            response = None
-
-            # Wait for user key press
-            waiting_for_response = True
-            while waiting_for_response:
-                for evt in pygame.event.get():
-                    if evt.type == pygame.QUIT:
-                        # Exit early => save partial results
-                        if results:
-                            all_results.extend(results)
-                        save_results(all_results)
+                    save_results(results)
+                    pygame.quit()
+                    sys.exit(0)
+                elif evt.type == pygame.KEYDOWN:
+                    if evt.key == pygame.K_ESCAPE:
+                        save_results(results)
                         pygame.quit()
                         sys.exit(0)
+                    elif evt.key == pygame.K_f:
+                        response = True
+                        waiting_for_response = False
+                    elif evt.key == pygame.K_j:
+                        response = False
+                        waiting_for_response = False
 
-                    elif evt.type == pygame.KEYDOWN:
-                        if evt.key == pygame.K_f:
-                            response = True  # user thinks it's a match
-                            waiting_for_response = False
-                        elif evt.key == pygame.K_j:
-                            response = False # user thinks it's NOT a match
-                            waiting_for_response = False
+        reaction_time = time.time() - start_time
+        is_correct = (response == is_match)
+        results.append([
+            test_number,
+            round_number,
+            word,
+            is_match,
+            response,
+            reaction_time,
+            is_correct,
+            trial_timestamp
+        ])
 
-            reaction_time = time.time() - start_time
-            is_correct = (response == is_match)
-            results.append([
-                test_number, 
-                word, 
-                is_match, 
-                response, 
-                reaction_time, 
-                is_correct, 
-                trial_timestamp  # add timestamp
-            ])
+        pygame.time.delay(100)
 
-            # Short delay (100ms) between trials
-            pygame.time.delay(100)
+    return results
 
-        return results
+# -------------------------------------------------------------------
+# FULL EXPERIMENT
+# -------------------------------------------------------------------
+def run_experiment():
+    """
+    Runs the entire experiment:
+      1) Control Recording (EEG Baseline) - WAIT_DURATION
+      2) Break - WAIT_DURATION
+      3) Attention Test (Initial Stroop) - 5 rounds
+      4) Doom Scroll - WAIT_DURATION
+      5) Attention Task (Post-exposure Stroop) - 5 rounds
 
-    # -------------------------------------------------------------------------
-    # 4) Main Loop: 5 Tests
-    # -------------------------------------------------------------------------
-    current_test = 1
-    while current_test <= 5:
-        # Show menu: "Begin Test X" or "Test X Completed"
-        if current_test == 1:
-            draw_menu(f"Begin Test {current_test}")
-        else:
-            draw_menu(f"Test {current_test - 1} Completed. Begin Test {current_test}?")
+    After each Stroop test, overall accuracy and total time are computed.
+    Summary rows for each test are appended to the CSV.
+    """
+    all_results = []
 
-        choice = handle_menu()
-        if choice == "exit":
-            # Save partial results and exit
-            if all_results:
-                save_results(all_results)
-            pygame.quit()
-            print("Exited early.")
-            return
+    # 1) Control Recording
+    show_message("Control Recording Phase (EEG Baseline) - Get Ready", duration=2)
+    run_timer(WAIT_DURATION, "Control Recording Phase (EEG Baseline)")
 
-        # Run the test
-        test_results = run_one_test(current_test)
+    # 2) Break
+    show_message("Break Phase - Get Ready", duration=2)
+    run_timer(WAIT_DURATION, "Break Phase")
+
+    # 3) Attention Test (Initial Stroop)
+    show_message("Attention Test - Stroop Test Begins", duration=2)
+    test1_start_time = time.time()
+    for round_number in range(1, 6):
+        show_message(f"Starting Stroop Round {round_number} / 5", duration=2)
+        test_results = run_stroop_test(test_number=1, round_number=round_number)
         all_results.extend(test_results)
+    test1_total_time = time.time() - test1_start_time
 
-        current_test += 1
+    # 4) Doom Scroll
+    show_message("Doom Scroll Phase - Get Ready", duration=2)
+    run_timer(WAIT_DURATION, "Doom Scroll Phase - Watch Short Videos")
 
-    # After finishing all 5 tests, show "All done"
-    draw_menu("All 5 Tests Complete!")
-    pygame.display.flip()
+    # 5) Attention Task (Post-exposure Stroop)
+    show_message("Post-exposure Attention Task - Stroop Test Begins", duration=2)
+    test2_start_time = time.time()
+    for round_number in range(1, 6):
+        show_message(f"Starting Stroop Round {round_number} / 5", duration=2)
+        test_results = run_stroop_test(test_number=2, round_number=round_number)
+        all_results.extend(test_results)
+    test2_total_time = time.time() - test2_start_time
 
-    choice = handle_menu()
-    # Regardless of the choice, save final results
+    # Save trial results to CSV
     if all_results:
         save_results(all_results)
 
-    pygame.quit()
-    print("All tests complete. Program finished.")
+    # Compute accuracy for each Stroop test (Test 1 and Test 2)
+    test1_trials = [r for r in all_results if r[0] == 1]
+    test2_trials = [r for r in all_results if r[0] == 2]
 
-# -----------------------------------------------------------------------------
-# Run the script
-# -----------------------------------------------------------------------------
+    if test1_trials:
+        total1 = len(test1_trials)
+        correct1 = sum(1 for r in test1_trials if r[6])
+        accuracy1 = (correct1 / total1) * 100
+    else:
+        total1 = correct1 = accuracy1 = 0
+
+    if test2_trials:
+        total2 = len(test2_trials)
+        correct2 = sum(1 for r in test2_trials if r[6])
+        accuracy2 = (correct2 / total2) * 100
+    else:
+        total2 = correct2 = accuracy2 = 0
+
+    # Append summary rows for each test's accuracy and total time to the CSV
+    with open(save_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["SUMMARY", "Test 1", f"Accuracy: {accuracy1:.2f}% ({correct1}/{total1})", "", "", "", "", ""])
+        writer.writerow(["SUMMARY", "Test 1", f"Total Time: {test1_total_time:.2f} seconds", "", "", "", "", ""])
+        writer.writerow(["SUMMARY", "Test 2", f"Accuracy: {accuracy2:.2f}% ({correct2}/{total2})", "", "", "", "", ""])
+        writer.writerow(["SUMMARY", "Test 2", f"Total Time: {test2_total_time:.2f} seconds", "", "", "", "", ""])
+
+    print(f"Overall Accuracy Test 1: {correct1}/{total1} ({accuracy1:.2f}%)")
+    print(f"Total Time Test 1: {test1_total_time:.2f} seconds")
+    print(f"Overall Accuracy Test 2: {correct2}/{total2} ({accuracy2:.2f}%)")
+    print(f"Total Time Test 2: {test2_total_time:.2f} seconds")
+
+    show_message("Experiment Complete! Thank you.", duration=5)
+    pygame.quit()
+    print("Experiment finished.")
+
+# If this file is run directly, execute run_experiment()
 if __name__ == "__main__":
-    main()
+    run_experiment()
