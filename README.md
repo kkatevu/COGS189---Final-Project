@@ -24,9 +24,13 @@ COGS189---FINAL-PROJECT/
    │   ├── stroop_test.py
    │   ├── utils.py
    ├── data/
-   │   ├── (Examples of how data files will look)
-   │   ├── subject_001_session_001.npy
-   |   ├── stroop_results_001_session_001.csv
+        ├── subject001/
+        │   ├── eeg/
+            │   ├── eeg_subject1_session_001.npy
+            │   ├── aux_subject1_session_001.npy
+            │   └── timestamps_subject1_session_1.npy
+            ├── stroop/
+            |   ├── stroop_001_session_001.csv
 ├── README.md                    # Project documentation
 ├── requirements.txt             # Dependencies
 ├── .gitignore                   # Ignore unnecessary files
