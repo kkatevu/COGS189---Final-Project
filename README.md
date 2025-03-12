@@ -21,7 +21,6 @@ COGS189---FINAL-PROJECT/
    │   ├── eeg_data_analysis.ipynb
    ├── src/
    │   ├── collect_eeg.py
-   │   ├── process_eeg.py
    │   ├── stroop_test.py
    │   ├── utils.py
    ├── data/
