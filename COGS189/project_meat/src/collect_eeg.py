@@ -58,7 +58,7 @@ def main():
 
     # Use synthetic board for demo; replace with your port if needed.
     params = BrainFlowInputParams()
-    params.serial_port = "COM8"  # Adjust port as needed
+    params.serial_port = "COM7"  # Adjust port as needed
     board = BoardShim(BoardIds.CYTON_BOARD, params)
     board.prepare_session()
     board.start_stream()

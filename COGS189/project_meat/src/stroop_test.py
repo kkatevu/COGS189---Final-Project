@@ -50,7 +50,7 @@ COLOR_KEYS = list(COLORS.keys())
 FONT = pygame.font.Font(None, 80)
 INSTRUCTION_FONT = pygame.font.Font(None, 40)
 # For testing, set wait duration to 1 second; change to 300 for actual 5-minute stages.
-WAIT_DURATION = 300
+WAIT_DURATION = 120
 
 # ====================================
 # STROOP EXPERIMENT FUNCTIONS
@@ -257,7 +257,7 @@ def run_experiment(board):
 def main():
     BoardShim.enable_dev_board_logger()
     params = BrainFlowInputParams()
-    params.serial_port = "COM6"  # Adjust port as needed
+    params.serial_port = "COM#"  # Adjust port as needed
     board = BoardShim(BoardIds.CYTON_BOARD, params)
     board.prepare_session()
     board.start_stream(45000)
